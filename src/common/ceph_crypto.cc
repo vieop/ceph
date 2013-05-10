@@ -40,6 +40,8 @@ ceph::crypto::HMACSHA1::~HMACSHA1()
 void ceph::crypto::init(CephContext *cct)
 {
   SECStatus s;
+  cout << "cct is " << cct << std::endl;
+  cout << "cct conf is " << (cct ? cct->_conf : NULL) << std::endl;
   if (cct->_conf->nss_db_path.empty()) {
     s = NSS_NoDB_Init(NULL);
   } else {
