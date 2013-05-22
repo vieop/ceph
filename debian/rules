@@ -40,6 +40,8 @@ endif
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
+	echo extra args $(CEPH_EXTRA_CONFIGURE_ARGS)
+	printenv
 	./autogen.sh
 	./configure --prefix=/usr --sbindir=/sbin --localstatedir=/var \
 	  --sysconfdir=/etc $(extraopts) $(confflags) \
