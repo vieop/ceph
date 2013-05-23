@@ -133,7 +133,6 @@ int SnapMapper::get_snaps(
   const hobject_t &oid,
   object_snaps *out)
 {
-  assert(check(oid));
   set<string> keys;
   map<string, bufferlist> got;
   keys.insert(to_object_key(oid));
@@ -154,7 +153,6 @@ void SnapMapper::clear_snaps(
   const hobject_t &oid,
   MapCacher::Transaction<std::string, bufferlist> *t)
 {
-  assert(check(oid));
   set<string> to_remove;
   to_remove.insert(to_object_key(oid));
   backend.remove_keys(to_remove, t);
@@ -165,7 +163,6 @@ void SnapMapper::set_snaps(
   const object_snaps &in,
   MapCacher::Transaction<std::string, bufferlist> *t)
 {
-  assert(check(oid));
   map<string, bufferlist> to_set;
   bufferlist bl;
   ::encode(in, bl);
@@ -267,7 +264,6 @@ int SnapMapper::remove_oid(
   const hobject_t &oid,
   MapCacher::Transaction<std::string, bufferlist> *t)
 {
-  assert(check(oid));
   return _remove_oid(oid, t);
 }
 
