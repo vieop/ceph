@@ -4581,6 +4581,8 @@ void OSD::handle_osd_map(MOSDMap *m)
   // yay!
   consume_map();
 
+  if (osdmap->check_new_blacklist_entries()) check_blacklisted_watchers();
+
   if (!is_active()) {
     dout(10) << " not yet active; waiting for peering wq to drain" << dendl;
     peering_wq.drain();
@@ -6680,4 +6682,19 @@ int OSD::init_op_flags(OpRequestRef op)
     return -EINVAL;
 
   return 0;
+}
+
+void OSD::check_blacklisted_watchers()
+{
+  dout(20) << "OSD::check_blacklisted_watchers" << dendl;
+  assert(osd_lock.is_locked());
+  // scan pg's
+  for (hash_map<pg_t,PG*>::iterator it = pg_map.begin();
+       it != pg_map.end();
+       ++it) {
+    PG *pg = it->second;
+    pg->lock();
+    pg->check_blacklisted_watchers();
+    pg->unlock();
+  }
 }
