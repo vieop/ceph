@@ -9,6 +9,9 @@
 #include <boost/variant.hpp>
 #include <vector>
 #include <stdexcept>
+#ifdef __GNUC__
+#include <cxxabi.h>
+#endif
 #include "common/dout.h"
 #include "common/Formatter.h"
 
@@ -35,7 +38,19 @@ cmd_getval(CephContext *cct, std::map<std::string, cmd_vartype>& cmdmap, std::st
       return true;
     } catch (boost::bad_get) { 
       std::ostringstream errstr;
-      errstr << "bad boost::get: key " << k << " is not type " << typeid(T).name();
+      errstr << "bad boost::get: key " << k << " is not type ";
+#ifdef __GNUC__
+      int status;
+      char *tname = abi::__cxa_demangle(typeid(T).name(), 0, 0, &status);
+      if (status == 0) {
+	errstr << tname;
+	free(tname);
+      } else {
+	errstr << typeid(T).name();
+      }
+#else
+      errstr << typeid(T).name();
+#endif
       lderr(cct) << errstr.str() << dendl;
     }
   }
