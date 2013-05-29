@@ -1584,24 +1584,27 @@ main(int argc, char **argv)
 				prterrcode(errmsg, ret);
 			report_failure(102);
 			}
+			/*			
 			if ((ret = rbd_snap_remove(image, "snap")) < 0) {
 				sprintf(errmsg, "rbd_snap_remove %s@snap",
 					clonename);
 				prterrcode(errmsg, ret);
 				report_failure(103);
 			}
+			*/
 		}
 		if ((ret = rbd_close(image)) < 0) {
 			sprintf(errmsg, "rbd_close %s", clonename);
 			prterrcode(errmsg, ret);
 			report_failure(104);
 		}
-
+		/*
 		if ((ret = rbd_remove(ioctx, clonename)) < 0) {
 			sprintf(errmsg, "rbd_remove %s", clonename);
 			prterrcode(errmsg, ret);
 			report_failure(105);
 		}
+		*/
 
 		first = 0;
 		num_clones--;
