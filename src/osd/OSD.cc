@@ -1643,10 +1643,35 @@ PG *OSD::_create_lock_pg(
 
   PG *pg = _open_lock_pg(createmap, pgid, true, hold_map_lock);
 
-  DeletingStateRef df = service.deleting_pgs.lookup(pgid);
+  DeletingStateRef df;
+  pg_t cur(pgid);
+  // find nearest deleting ancestor
+  while (cur.ps()) {
+    df = service.deleting_pgs.lookup(cur);
+    if (df)
+      break;
+    cur = cur.get_parent();
+  }
   bool backfill = false;
 
-  if (df && df->try_stop_deletion()) {
+  set<pg_t> children;
+  /* We need to block if either:
+   * a) we are the child of a currently deleting pg or
+   * b) pgid is the same as a currently delting pg which has split
+   *    since it was queued
+   */
+  if (
+    df &&
+    cur.is_split( df->pg_num, osdmap->get_pg_num(cur.pool()), &children) &&
+    (cur == pgid || children.count(pgid))) {
+    dout(0) << __func__ << ": "
+	    << pgid << " creation blocked by split ancestor " << cur
+	    << ", blocking under osd_lock, sorry!" << dendl;
+    df->wait_for_complete();
+    df = DeletingStateRef();
+  }
+
+  if (df && (cur == pgid) && df->try_stop_deletion()) {
     dout(10) << __func__ << ": halted deletion on pg " << pgid << dendl;
     backfill = true;
     service.deleting_pgs.remove(pgid); // PG is no longer being removed!
@@ -2860,6 +2885,18 @@ bool remove_dir(
   return true;
 }
 
+struct SignalPGRemovalComplete : public Context {
+  PGRef pg;
+  DeletingStateRef df;
+  ObjectStore::Transaction *t;
+  SignalPGRemovalComplete(
+    PGRef _pg, DeletingStateRef _df, ObjectStore::Transaction *_t)
+    : pg(_pg), df(_df), t(_t) {}
+  void finish(int) {
+    df->complete();
+  }
+};
+
 void OSD::RemoveWQ::_process(pair<PGRef, DeletingStateRef> item)
 {
   PGRef pg(item.first);
@@ -2902,8 +2939,7 @@ void OSD::RemoveWQ::_process(pair<PGRef, DeletingStateRef> item)
     0, // onapplied
     0, // oncommit
     0, // onreadable sync
-    new ObjectStore::C_DeleteTransactionHolder<PGRef>(
-      t, pg), // oncomplete
+    new SignalPGRemovalComplete(item.first, item.second, t), // on complete
     TrackedOpRef());
 
   item.second->finish_deleting();
@@ -6010,7 +6046,12 @@ void OSD::_remove_pg(PG *pg)
 
   service.cancel_pending_splits_for_parent(pg->info.pgid);
 
-  DeletingStateRef deleting = service.deleting_pgs.lookup_or_create(pg->info.pgid);
+  DeletingStateRef deleting =
+    service.deleting_pgs.lookup_or_create(
+      pg->info.pgid,
+      make_pair(
+	pg->info.pgid,
+	pg->get_osdmap()->get_pg_num(pg->info.pgid.pool())));
   remove_wq.queue(make_pair(PGRef(pg), deleting));
 
   store->queue_transaction(

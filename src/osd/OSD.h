@@ -149,11 +149,19 @@ class DeletingState {
     DELETING_DIR,
     DELETED_DIR,
     CANCELED,
+    COMPLETE
   } status;
   bool stop_deleting;
 public:
-  DeletingState() :
-    lock("DeletingState::lock"), status(QUEUED), stop_deleting(false) {}
+  const pg_t pgid;
+  const uint64_t pg_num;
+  DeletingState(const pair<pg_t, uint64_t> &in) :
+    lock("DeletingState::lock"),
+    status(QUEUED),
+    stop_deleting(false),
+    pgid(in.first),
+    pg_num(in.second)
+    {}
 
   /// check whether removal was canceled
   bool check_canceled() {
@@ -203,6 +211,14 @@ public:
     cond.Signal();
   }
 
+  /// signal collection removal complete
+  void complete() {
+    Mutex::Locker l(lock);
+    assert(status == DELETED_DIR);
+    status = COMPLETE;
+    cond.Signal();
+  }
+
   /// try to halt the deletion
   bool try_stop_deletion() {
     Mutex::Locker l(lock);
@@ -220,6 +236,13 @@ public:
       cond.Wait(lock);
     return status != DELETED_DIR;
   } ///< @return true if we don't need to recreate the collection
+
+  /// Block until the deletion is complete
+  void wait_for_complete() {
+    Mutex::Locker l(lock);
+    while (status != COMPLETE || status != CANCELED)
+      cond.Wait(lock);
+  }
 };
 typedef std::tr1::shared_ptr<DeletingState> DeletingStateRef;
 
