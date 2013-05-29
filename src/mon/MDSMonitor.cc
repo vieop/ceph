@@ -826,8 +826,7 @@ bool MDSMonitor::prepare_command(MMonCommand *m)
 
   } else if (prefix == "mds set_max_mds") {
     int64_t maxmds;
-    cmd_getval(g_ceph_context, cmdmap, "maxmds", maxmds);
-    if (maxmds < 0)
+    if (!cmd_getval(g_ceph_context, cmdmap, "maxmds", maxmds) || maxmds < 0)
       goto out;
     pending_mdsmap.max_mds = maxmds;
     r = 0;
