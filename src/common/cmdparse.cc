@@ -33,9 +33,9 @@ dump_cmd_to_json(JSONFormatter *f, const string& cmd)
 
   int argnum = 0;
   stringstream ss(cmd);
-  std::string word;
+  string word;
 
-  while (std::getline(ss, word, ' ')) {
+  while (getline(ss, word, ' ')) {
     argnum++;
     // if no , or =, must be a plain word to put out
     if (word.find_first_of(",=") == string::npos) {
@@ -44,30 +44,30 @@ dump_cmd_to_json(JSONFormatter *f, const string& cmd)
     }
     // Snarf up all the key=val,key=val pairs, put 'em in a dict.
     // no '=val' implies '=True'.
-    std::stringstream argdesc(word);
-    std::string keyval, name;
-    std::map<std::string, std::string>desckv;
+    stringstream argdesc(word);
+    string keyval, name;
+    map<string, string>desckv;
     // accumulate descriptor keywords in desckv
     size_t pos;
 
-    while (std::getline(argdesc, keyval, ',')) {
+    while (getline(argdesc, keyval, ',')) {
       // key=value; key by itself implies value is bool true
       // name="name" means arg dict will be titled 'name'
       pos = keyval.find('=');
-      std::string key, val;
-      if (pos != std::string::npos) {
+      string key, val;
+      if (pos != string::npos) {
 	key = keyval.substr(0, pos);
 	val = keyval.substr(pos+1);
       } else {
         key = keyval;
         val = true;
       }
-      desckv.insert(std::pair<std::string, std::string> (key, val));
+      desckv.insert(pair<string, string> (key, val));
     }
     // name the individual desc object based on the name key
     f->open_object_section(desckv["name"].c_str());
     // dump all the keys including name into the array
-    for (std::map<std::string, std::string>::iterator it = desckv.begin();
+    for (map<string, string>::iterator it = desckv.begin();
 	 it != desckv.end(); it++) {
       f->dump_string(it->first.c_str(), it->second);
     }
