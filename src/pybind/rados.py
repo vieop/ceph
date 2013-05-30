@@ -252,6 +252,28 @@ Rados object in state %s." % (self.state))
         if (ret != 0):
             raise make_ex(ret, "error calling conf_read_file")
 
+    def conf_parse_argv(self, args):
+        """
+        Parse known arguments from args, and remove; returned
+        args contain only those unknown to ceph
+        """
+        self.require_state("configuring", "connected")
+        if not args:
+            return
+        cargs = (c_char_p * len(args))()
+        cargs[:] = args
+        cretargs = (c_char_p * len(args))()
+        ret = run_in_thread(self.librados.rados_conf_parse_argv_remainder,
+                            (self.cluster, len(args), cargs, cretargs))
+        if ret:
+           raise make_ex("error calling conf_parse_argv_remainder")
+
+        # cretargs was allocated with fixed length; collapse return
+        # list to eliminate any missing args
+
+        retargs = [a for a in cretargs if a is not None]
+        return retargs
+
     def conf_get(self, option):
         """
         Get the value of a configuration option
