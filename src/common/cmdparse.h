@@ -14,6 +14,7 @@
 #endif
 #include "common/dout.h"
 #include "common/Formatter.h"
+#include "common/BackTrace.h"
 
 /* this is handy; can't believe it's not standard */
 #define ARRAY_SIZE(a)	(sizeof(a) / sizeof(*a))
@@ -36,9 +37,9 @@ cmd_getval(CephContext *cct, std::map<std::string, cmd_vartype>& cmdmap, std::st
     try {
       val = boost::get<T>(cmdmap[k]);
       return true;
-    } catch (boost::bad_get) { 
+    } catch (boost::bad_get) {
       std::ostringstream errstr;
-      errstr << "bad boost::get: key " << k << " is not type ";
+      errstr << "bad boost::get: key " << k << ", which value " << cmdmap[k].which() << ", is not type ";
 #ifdef __GNUC__
       int status;
       char *tname = abi::__cxa_demangle(typeid(T).name(), 0, 0, &status);
@@ -52,6 +53,10 @@ cmd_getval(CephContext *cct, std::map<std::string, cmd_vartype>& cmdmap, std::st
       errstr << typeid(T).name();
 #endif
       lderr(cct) << errstr.str() << dendl;
+      BackTrace bt(1);
+      ostringstream oss;
+      bt.print(oss);
+      lderr(cct) << oss << dendl;
     }
   }
   // either not found or bad type, return false

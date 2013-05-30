@@ -190,7 +190,7 @@ bool MDSMonitor::preprocess_beacon(MMDSBeacon *m)
   if (!session)
     goto out;
   if (!session->is_capable("mds", MON_CAP_X)) {
-    dout(0) << "preprocess_beason got MMDSBeacon from entity with insufficient privileges "
+    dout(0) << "preprocess_beacon got MMDSBeacon from entity with insufficient privileges "
 	    << session->caps << dendl;
     goto out;
   }
@@ -826,6 +826,11 @@ bool MDSMonitor::prepare_command(MMonCommand *m)
 
   } else if (prefix == "mds set_max_mds") {
     int64_t maxmds;
+    if (cmdmap["maxmds"].which() != 2) {
+      ss << "wtf: maxmds's type is not 2, but rather " << cmdmap["maxmds"].which();
+      r = -EINVAL;
+      goto out;
+    }
     if (!cmd_getval(g_ceph_context, cmdmap, "maxmds", maxmds) || maxmds < 0)
       goto out;
     pending_mdsmap.max_mds = maxmds;
