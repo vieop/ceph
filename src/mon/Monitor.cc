@@ -2149,7 +2149,6 @@ bool Monitor::_allowed_command(MonSession *s, map<string, cmd_vartype>& cmd)
   for (map<string, cmd_vartype>::const_iterator p = cmd.begin();
        p != cmd.end(); ++p) {
     if (p->first != "prefix") {
-      // this new's a string, so it must be deleted below.. XXX
       strmap[p->first] = cmd_vartype_stringify(p->second);
     }
   }
@@ -2157,11 +2156,6 @@ bool Monitor::_allowed_command(MonSession *s, map<string, cmd_vartype>& cmd)
   if (s->caps.is_capable(g_ceph_context, s->inst.name,
 			 "", prefix, strmap, false, false, false)) {
     retval = true; 
-  }
-
-  for (map<string, cmd_vartype>::const_iterator p = cmd.begin();
-       p != cmd.end(); ++p) {
-      delete &(strmap[p->first]);
   }
 
   return retval;

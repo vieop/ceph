@@ -179,7 +179,7 @@ class stringify_visitor : public boost::static_visitor<string>
       {
 	ostringstream oss;
 	oss << operand;
-	return *(new string(oss.str()));
+	return oss.str();
       }
 };
 
