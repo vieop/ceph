@@ -171,11 +171,24 @@ cmdmap_from_json(vector<string> cmd, map<string, cmd_vartype> *mapp, stringstrea
   }
 }
 
-/*
- * Sadly, g++ wants to screw up if I do the obvious templating on these
- * three cmd_XXXval functions.  Expand them by hand instead: bool cmd_getval(),
- * void cmd_getval() with default value, and cmd_putval().
- */
+class stringify_visitor : public boost::static_visitor<string>
+{
+  public:
+    template <typename T>
+    string operator()(T &operand) const
+      {
+	ostringstream oss;
+	oss << operand;
+	return *(new string(oss.str()));
+      }
+};
+
+string 
+cmd_vartype_stringify(const cmd_vartype &v)
+{
+  return boost::apply_visitor(stringify_visitor(), v);
+}
+
 
 void
 handle_bad_get(CephContext *cct, string k, string typestr)
@@ -189,6 +202,12 @@ handle_bad_get(CephContext *cct, string k, string typestr)
   bt.print(oss);
   lderr(cct) << oss << dendl;
 }
+
+/*
+ * Sadly, g++ wants to screw up if I do the obvious templating on these
+ * three cmd_XXXval functions.  Expand them by hand instead: bool cmd_getval(),
+ * void cmd_getval() with default value, and cmd_putval().
+ */
 
 bool
 cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
@@ -339,4 +358,3 @@ cmd_putval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
 {
   cmdmap[k] = val;
 }
-

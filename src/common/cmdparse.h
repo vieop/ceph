@@ -27,6 +27,8 @@ void dump_cmd_and_help_to_json(ceph::JSONFormatter *f,
 bool cmdmap_from_json(std::vector<std::string> cmd, cmdmap_t *mapp,
 		      std::stringstream &ss);
 
+std::string cmd_vartype_stringify(const cmd_vartype& v);
+
 bool cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
 		std::string& val);
 bool cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k, bool& val);
