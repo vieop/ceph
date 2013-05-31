@@ -260,8 +260,9 @@ Rados object in state %s." % (self.state))
         self.require_state("configuring", "connected")
         if not args:
             return
-        cargs = (c_char_p * len(args))()
-        cargs[:] = args
+        # create instances of arrays of c_char_p's, both len(args) long
+        # cretargs will always be a subset of cargs (perhaps identical)
+        cargs = (c_char_p * len(args))(*args)
         cretargs = (c_char_p * len(args))()
         ret = run_in_thread(self.librados.rados_conf_parse_argv_remainder,
                             (self.cluster, len(args), cargs, cretargs))

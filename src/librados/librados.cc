@@ -1554,8 +1554,8 @@ extern "C" int rados_conf_parse_argv(rados_t cluster, int argc, const char **arg
 
 // like above, but return the remainder of argv to contain remaining
 // unparsed args.  Must be allocated to at least argc by caller.
-// remargv will contain n <= argc pointers to original argv[], terminated
-// with NULL
+// remargv will contain n <= argc pointers to original argv[], the end
+// of which may be NULL
 
 extern "C" int rados_conf_parse_argv_remainder(rados_t cluster, int argc,
 					       const char **argv,
@@ -1572,10 +1572,12 @@ extern "C" int rados_conf_parse_argv_remainder(rados_t cluster, int argc,
   conf->apply_changes(NULL);
   assert(args.size() <= (unsigned int)argc);
   unsigned int i;
-  for (i = 0; i < args.size(); ++i) {
-    remargv[i] = args[i];
+  for (i = 0; i < argc; ++i) {
+    if (i < args.size())
+      remargv[i] = args[i];
+    else
+      remargv[i] = (const char *)NULL;
   }
-  remargv[i] = (const char *)NULL;
   return 0;
 }
 
