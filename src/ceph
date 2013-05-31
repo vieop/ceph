@@ -1147,7 +1147,7 @@ def ceph_conf(field, name):
         raise RuntimeError('unable to get conf option %s for %s: %s' % (field, name, errdata))
     return outdata.rstrip()
 
-def new_style_command(target, sigdict, inbuf, verbose):
+def new_style_command(parsed_args, childargs, target, sigdict, inbuf, verbose):
     """
     Do new-style command dance.
     target: daemon to receive command: mon (any) or osd.N
@@ -1155,8 +1155,6 @@ def new_style_command(target, sigdict, inbuf, verbose):
     inbuf - any -i input file data
     verbose - bool
     """
-
-    parsed_args, cmdargs = parse_cmdargs(target=target)
     if verbose:
         for cmdtag in sorted(sigdict.keys()):
             cmd = sigdict[cmdtag]
@@ -1300,13 +1298,9 @@ def complete(sigdict, args, target):
 
 def main():
 
-    # we have to parse twice, because we have to collect early
-    # options to be able to run the "get_command_descriptions" command.
-    parsed_args, childargs = parse_cmdargs(first=True)
+    parsed_args, childargs = parse_cmdargs(first=False)
 
     verbose = parsed_args.verbose
-
-    extraconf = {}
 
     # pass on --id, --name, -k, -c
     name = None
@@ -1322,10 +1316,6 @@ def main():
     conffile = ''
     if parsed_args.cephconf:
         conffile = parsed_args.cephconf
-
-    if len(extraconf) == 0:
-        extraconf = None
-
     # For now, --admin-daemon is handled as usual.  Try it
     # first in case we can't connect() to the cluster
     if parsed_args.admin_socket:
@@ -1346,9 +1336,14 @@ def main():
             print >> sys.stderr, 'Daemon requires at least 2 arguments'
             return 1
 
+    # handle any 'generic' ceph arguments that we didn't parse here
+    global cluster
+    cluster = rados.Rados(rados_id=name, conffile='')
+    retargs = cluster.conf_parse_argv(childargs)
+    childargs = retargs[:]
+
     try:
-        cluster = rados.Rados(rados_id=name, conf=extraconf, conffile=conffile)
-        cluster.connect(timeout=10)
+        cluster.connect(timeout=15)
     except KeyboardInterrupt:
         print >> sys.stderr, "connection aborted"
         return 1
@@ -1363,6 +1358,8 @@ def main():
             else:
                 level = k.replace('watch_', '')
     if level:
+
+        # an awfully simple callback
         def watch_cb(arg, line, who, stamp_sec, stamp_nsec, seq, level, msg):
             print line
 
@@ -1429,7 +1426,8 @@ def main():
     if parsed_args.completion:
         return complete(sigdict, childargs, target)
 
-    ret, outbuf, outs = new_style_command(target, sigdict, inbuf, verbose)
+    ret, outbuf, outs = new_style_command(parsed_args, childargs, target,
+                                          sigdict, inbuf, verbose)
 
     if ret < 0:
         ret = -ret
