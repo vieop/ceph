@@ -9,6 +9,7 @@
 #include <boost/variant.hpp>
 #include <vector>
 #include <stdexcept>
+#include <typeinfo>
 #include "common/Formatter.h"
 #include "common/BackTrace.h"
 #include "common/ceph_context.h"
@@ -26,36 +27,39 @@ void dump_cmd_and_help_to_json(ceph::JSONFormatter *f,
 			       const std::string& helptext);
 bool cmdmap_from_json(std::vector<std::string> cmd, cmdmap_t *mapp,
 		      std::stringstream &ss);
+void handle_bad_get(CephContext *cct, std::string k, const char *name);
 
 std::string cmd_vartype_stringify(const cmd_vartype& v);
 
-bool cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		std::string& val);
-bool cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k, bool& val);
-bool cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		int64_t& val);
-bool cmd_getval(CephContext *cct, cmdmap_t & cmdmap, std::string k,
-		double& val);
-bool cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		std::vector<std::string>& val);
+template <typename T>
+bool
+cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k, T& val)
+{
+  if (cmdmap.count(k)) {
+    try {
+      val = boost::get<T>(cmdmap[k]);
+      return true;
+    } catch (boost::bad_get) {
+      handle_bad_get(cct, k, typeid(T).name());
+    }
+  }
+  return false;
+}
 
-void cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		std::string& val, std::string defval);
-void cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		bool& val, bool defval);
-void cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		int64_t& val, int64_t defval);
-void cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		double& val, double defval);
-void cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		std::vector<std::string>& val, std::vector<std::string> defval);
+// with default
 
-void cmd_putval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		std::string val);
-void cmd_putval(CephContext *cct, cmdmap_t& cmdmap, std::string k, bool val);
-void cmd_putval(CephContext *cct, cmdmap_t& cmdmap, std::string k, int64_t val);
-void cmd_putval(CephContext *cct, cmdmap_t& cmdmap, std::string k, double val);
-void cmd_putval(CephContext *cct, cmdmap_t& cmdmap, std::string k,
-		std::vector<std::string> val);
+template <typename T>
+void
+cmd_getval(CephContext *cct, cmdmap_t& cmdmap, std::string k, T& val, T defval)
+{
+  if (!cmd_getval(cct, cmdmap, k, val))
+    val = defval;
+}
 
+template <typename T>
+void
+cmd_putval(CephContext *cct, cmdmap_t& cmdmap, std::string k, T val)
+{
+  cmdmap[k] = val;
+}
 #endif

@@ -12,6 +12,7 @@
  *
  */
 
+#include <cxxabi.h>
 #include "common/cmdparse.h"
 #include "include/str_list.h"
 #include "json_spirit/json_spirit.h"
@@ -191,9 +192,13 @@ cmd_vartype_stringify(const cmd_vartype &v)
 
 
 void
-handle_bad_get(CephContext *cct, string k, string typestr)
+handle_bad_get(CephContext *cct, string k, const char *tname)
 {
   ostringstream errstr;
+  int status;
+  const char *typestr = abi::__cxa_demangle(tname, 0, 0, &status);
+  if (status != 0) 
+    typestr = tname;
   errstr << "bad boost::get: key " << k << " is not type " << typestr;
   lderr(cct) << errstr.str() << dendl;
 
@@ -201,160 +206,4 @@ handle_bad_get(CephContext *cct, string k, string typestr)
   ostringstream oss;
   bt.print(oss);
   lderr(cct) << oss << dendl;
-}
-
-/*
- * Sadly, g++ wants to screw up if I do the obvious templating on these
- * three cmd_XXXval functions.  Expand them by hand instead: bool cmd_getval(),
- * void cmd_getval() with default value, and cmd_putval().
- */
-
-bool
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, string& val)
-{
-  if (cmdmap.count(k)) {
-    try {
-      val = boost::get<std::string>(cmdmap[k]);
-      return true;
-    } catch (boost::bad_get) {
-      handle_bad_get(cct, k, "string");
-    }
-  }
-  return false;
-}
-
-bool
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, bool& val)
-{
-  if (cmdmap.count(k)) {
-    try {
-      val = boost::get<bool>(cmdmap[k]);
-      return true;
-    } catch (boost::bad_get) {
-      handle_bad_get(cct, k, "bool");
-    }
-  }
-  return false;
-}
-
-bool
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, int64_t& val)
-{
-  if (cmdmap.count(k)) {
-    try {
-      val = boost::get<int64_t>(cmdmap[k]);
-      return true;
-    } catch (boost::bad_get) {
-      handle_bad_get(cct, k, "int64_t");
-    }
-  }
-  return false;
-}
-
-bool
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, double& val)
-{
-  if (cmdmap.count(k)) {
-    try {
-      val = boost::get<double>(cmdmap[k]);
-      return true;
-    } catch (boost::bad_get) {
-      handle_bad_get(cct, k, "double");
-    }
-  }
-  return false;
-}
-
-bool
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, vector<string>& val)
-{
-  if (cmdmap.count(k)) {
-    try {
-      val = boost::get<std::vector<std::string> >(cmdmap[k]);
-      return true;
-    } catch (boost::bad_get) {
-      handle_bad_get(cct, k, "vector<string>");
-    }
-  }
-  return false;
-}
-
-void
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, string& val, string defval)
-{
-  if (!cmd_getval(cct, cmdmap, k, val))
-    val = defval;
-}
-
-void
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, bool& val, bool defval)
-{
-  if (!cmd_getval(cct, cmdmap, k, val))
-    val = defval;
-}
-
-void
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, int64_t& val, int64_t defval)
-{
-  if (!cmd_getval(cct, cmdmap, k, val))
-    val = defval;
-}
-
-void
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, double& val, double defval)
-{
-  if (!cmd_getval(cct, cmdmap, k, val))
-    val = defval;
-}
-
-void
-cmd_getval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, vector<string>& val, vector<string> defval)
-{
-  if (!cmd_getval(cct, cmdmap, k, val))
-    val = defval;
-}
-
-void
-cmd_putval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, string val)
-{
-  cmdmap[k] = val;
-}
-
-void
-cmd_putval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, bool val)
-{
-  cmdmap[k] = val;
-}
-
-void
-cmd_putval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, int64_t val)
-{
-  cmdmap[k] = val;
-}
-
-void
-cmd_putval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, double val)
-{
-  cmdmap[k] = val;
-}
-
-void
-cmd_putval(CephContext *cct, map<string, cmd_vartype>& cmdmap,
-	   string k, vector<string> val)
-{
-  cmdmap[k] = val;
 }
