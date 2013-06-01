@@ -279,7 +279,8 @@ public:
 
       // to our index
       objects[e.soid] = &(log.back());
-      caller_ops[e.reqid] = &(log.back());
+      if (e.reqid_is_indexed())
+	caller_ops[e.reqid] = &(log.back());
     }
 
     void trim(ObjectStore::Transaction &t, hobject_t& oid, eversion_t s);
@@ -383,6 +384,7 @@ public:
   }
 protected:
   OSDMapRef osdmap_ref;
+  OSDMapRef last_persisted_osdmap_ref;
   PGPool pool;
 
   OSDMapRef get_osdmap() const {
