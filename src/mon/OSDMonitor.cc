@@ -1648,7 +1648,6 @@ void OSDMonitor::tick()
 {
   if (!is_active()) return;
 
-  update_from_paxos();
   dout(10) << osdmap << dendl;
 
   if (!mon->is_leader()) return;
